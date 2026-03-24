@@ -1,0 +1,1784 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gerador de Variações para Cardápio Sheets - Ferramenta para criar variações de produtos com preços dinâmicos">
+    <meta name="author" content="Dante Testa - https://dantetesta.com.br">
+    <meta name="version" content="2.3.0">
+    <meta name="keywords" content="cardápio, variações, preços, restaurante, delivery, floricultura, horta, sushi, brigadeiro, brownie, cafe, doces, sucos">
+    <title>🎨 Gerador de Variações - Cardápio Sheets v3.7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --cor-primaria: #EA1D2C;
+            --cor-secundaria: #FF6B35;
+            --cor-sucesso: #4CAF50;
+            --cor-erro: #F44336;
+        }
+        
+        body { font-family: 'Inter', sans-serif; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--cor-primaria) 0%, var(--cor-secundaria) 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(234, 29, 44, 0.4);
+        }
+        
+        .variation-item {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .variation-item:hover {
+            border-color: var(--cor-primaria);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        
+        .notification.show { transform: translateX(-50%) translateY(0); }
+        .notification.success { background: var(--cor-sucesso); }
+        .notification.error { background: var(--cor-erro); }
+        .notification.warning { background: #f59e0b; }
+        .notification.info { background: #3b82f6; }
+        
+        .notification-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+        }
+        
+        .notification-close:hover {
+            opacity: 1;
+        }
+        
+        .value-type-btn {
+            width: 32px;
+            height: 32px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .value-type-btn:hover {
+            border-color: #d1d5db;
+            background: #f9fafb;
+        }
+        
+        .value-type-btn.active {
+            border-color: var(--cor-primaria);
+            background: #fef2f2;
+        }
+        
+        .template-btn {
+            padding: 8px 6px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+        }
+        
+        .template-btn:hover {
+            border-color: var(--cor-primaria);
+            background: #fef2f2;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .template-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .value-type-btn.active[data-type="positive"] {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        
+        .value-type-btn.active[data-type="negative"] {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .remove-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #fca5a5;
+            border-radius: 6px;
+            background: white;
+            color: #dc2626;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .remove-btn:hover {
+            background: #fef2f2;
+            border-color: #dc2626;
+        }
+        
+        .variation-item {
+            cursor: move;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .variation-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: #e5e7eb;
+        }
+        
+        .variation-item.moving {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #10b981;
+        }
+        
+        .move-btn {
+            width: 24px;
+            height: 20px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: white;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .move-btn:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .move-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .move-btn:disabled:hover {
+            border-color: #d1d5db;
+            color: #6b7280;
+            background: white;
+        }
+        
+        /* Estilos para drag and drop das opções */
+        .options-container {
+            min-height: 60px;
+        }
+        
+        .option-item {
+            transition: all 0.2s ease;
+            cursor: move;
+        }
+        
+        .option-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .option-item.sortable-ghost {
+            opacity: 0.4;
+            background: #f3f4f6;
+        }
+        
+        .option-item.sortable-drag {
+            transform: rotate(5deg);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .drag-handle {
+            cursor: grab;
+            color: #9ca3af;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .drag-handle:hover {
+            color: #6b7280;
+            background: #f3f4f6;
+        }
+        
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen py-8 px-4">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-800 mb-4">🎨 Gerador de Variações</h1>
+                <p class="text-lg text-gray-600 mb-2">Cardápio Sheets - Crie variações complexas de forma visual</p>
+                
+
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Configuração -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800">⚙️ Configuração</h2>
+                                <p id="variation-counter" class="text-sm text-gray-500 mt-1">0 variações configuradas</p>
+                            </div>
+                            <button onclick="addVariation()" class="btn-primary">➕ Adicionar Variação</button>
+                        </div>
+
+                        <!-- Templates -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold mb-3">🚀 Templates Rápidos:</h3>
+                            <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                                <button onclick="loadTemplate('acai')" class="template-btn">
+                                    <div class="text-lg">🍨</div>
+                                    <div class="text-xs font-medium mt-1">Açaí</div>
+                                </button>
+                                <button onclick="loadTemplate('pizza')" class="template-btn">
+                                    <div class="text-lg">🍕</div>
+                                    <div class="text-xs font-medium mt-1">Pizza</div>
+                                </button>
+                                <button onclick="loadTemplate('pipoca')" class="template-btn">
+                                    <div class="text-lg">🍿</div>
+                                    <div class="text-xs font-medium mt-1">Pipoca</div>
+                                </button>
+                                <button onclick="loadTemplate('bolos')" class="template-btn">
+                                    <div class="text-lg">🍰</div>
+                                    <div class="text-xs font-medium mt-1">Bolo</div>
+                                </button>
+                                <button onclick="loadTemplate('hamburguer')" class="template-btn">
+                                    <div class="text-lg">🍔</div>
+                                    <div class="text-xs font-medium mt-1">X-Burger</div>
+                                </button>
+                                <button onclick="loadTemplate('hotdog')" class="template-btn">
+                                    <div class="text-lg">🌭</div>
+                                    <div class="text-xs font-medium mt-1">Cachorro</div>
+                                </button>
+                                <button onclick="loadTemplate('bar')" class="template-btn">
+                                    <div class="text-lg">🍟</div>
+                                    <div class="text-xs font-medium mt-1">Batata</div>
+                                </button>
+                                <button onclick="loadTemplate('sorvete')" class="template-btn">
+                                    <div class="text-lg">🥤</div>
+                                    <div class="text-xs font-medium mt-1">Milk Shake</div>
+                                </button>
+                                <button onclick="loadTemplate('marmita')" class="template-btn">
+                                    <div class="text-lg">🍱</div>
+                                    <div class="text-xs font-medium mt-1">Marmita</div>
+                                </button>
+                                <button onclick="loadTemplate('cafe')" class="template-btn">
+                                    <div class="text-lg">☕</div>
+                                    <div class="text-xs font-medium mt-1">Cappuccino</div>
+                                </button>
+                                <button onclick="loadTemplate('pastel')" class="template-btn">
+                                    <div class="text-lg">🥟</div>
+                                    <div class="text-xs font-medium mt-1">Pastel</div>
+                                </button>
+                                <button onclick="loadTemplate('tapioca')" class="template-btn">
+                                    <div class="text-lg">🥞</div>
+                                    <div class="text-xs font-medium mt-1">Tapioca</div>
+                                </button>
+                                <button onclick="loadTemplate('crepe')" class="template-btn">
+                                    <div class="text-lg">🥞</div>
+                                    <div class="text-xs font-medium mt-1">Crepe</div>
+                                </button>
+                                <button onclick="loadTemplate('espetinho')" class="template-btn">
+                                    <div class="text-lg">🍖</div>
+                                    <div class="text-xs font-medium mt-1">Espeto</div>
+                                </button>
+                                <button onclick="loadTemplate('salgados')" class="template-btn">
+                                    <div class="text-lg">🥪</div>
+                                    <div class="text-xs font-medium mt-1">Coxinha</div>
+                                </button>
+                                <button onclick="loadTemplate('sorveteria')" class="template-btn">
+                                    <div class="text-lg">🍦</div>
+                                    <div class="text-xs font-medium mt-1">Sorveteria</div>
+                                </button>
+                                <button onclick="loadTemplate('floricultura')" class="template-btn">
+                                    <div class="text-lg">🌸</div>
+                                    <div class="text-xs font-medium mt-1">Floricultura</div>
+                                </button>
+                                <button onclick="loadTemplate('horta')" class="template-btn">
+                                    <div class="text-lg">🥦</div>
+                                    <div class="text-xs font-medium mt-1">Horta</div>
+                                </button>
+                                <button onclick="loadTemplate('sushi')" class="template-btn">
+                                    <div class="text-lg">🍣</div>
+                                    <div class="text-xs font-medium mt-1">Sushi</div>
+                                </button>
+                                <button onclick="loadTemplate('brigadeiro')" class="template-btn">
+                                    <div class="text-lg">🍫</div>
+                                    <div class="text-xs font-medium mt-1">Brigadeiro</div>
+                                </button>
+                                <button onclick="loadTemplate('brownie')" class="template-btn">
+                                    <div class="text-lg">🍰</div>
+                                    <div class="text-xs font-medium mt-1">Brownie</div>
+                                </button>
+                                <button onclick="loadTemplate('cafe_especial')" class="template-btn">
+                                    <div class="text-lg">☕</div>
+                                    <div class="text-xs font-medium mt-1">Café</div>
+                                </button>
+                                <button onclick="loadTemplate('doces')" class="template-btn">
+                                    <div class="text-lg">🍭</div>
+                                    <div class="text-xs font-medium mt-1">Doces</div>
+                                </button>
+                                <button onclick="loadTemplate('sucos')" class="template-btn">
+                                    <div class="text-lg">🥤</div>
+                                    <div class="text-xs font-medium mt-1">Sucos</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Dica sobre Reordenação -->
+                        <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div class="flex items-center gap-2 text-yellow-800">
+                                <span class="text-lg">↕️</span>
+                                <span class="text-sm font-medium">Dica:</span>
+                                <span class="text-sm">Use as setas ↑↓ para reordenar as variações. Arraste apenas os itens dentro das variações.</span>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Variações -->
+                        <div id="variationsList" class="space-y-4 sortable-list"></div>
+
+                        <!-- Botões -->
+                        <div class="flex gap-3 mt-6">
+                            <button onclick="clearAll()" class="px-4 py-2 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all">
+                                🗑️ Limpar
+                            </button>
+                            <button onclick="importString()" class="px-4 py-2 border-2 border-blue-500 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-all">
+                                📥 Importar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output -->
+                <div class="space-y-6">
+                    <!-- String Gerada -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">📋 String Gerada</h2>
+                        <textarea id="generatedString" class="w-full h-40 p-4 border-2 border-gray-200 rounded-lg font-mono text-sm resize-vertical" readonly placeholder="As strings de variação aparecerão aqui...
+
+Exemplo:
+#Tamanho:radio:Pequeno +0,00/Médio +2,50/Grande +5,00
+Var: Extras:checkbox:Bacon +4,00/Queijo +2,50"></textarea>
+                        
+                        <div class="flex gap-3 mt-4">
+                            <button onclick="copyString()" class="btn-primary">📋 Copiar</button>
+                        </div>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">👁️ Preview</h2>
+                        <div id="previewContainer" class="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                            <div class="text-center text-gray-500">
+                                <div class="text-4xl mb-4">🎯</div>
+                                <p>Configure as variações para ver o preview</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        let variationCounter = 0;
+
+        const templates = {
+            acai: {
+                name: "🍨 Açaí na Tigela",
+                variations: [
+                    { name: "Tamanho", type: "radio", options: ["300ml:0.00", "500ml:3.00", "700ml:6.00"], isRequired: true },
+                    { name: "Complementos", type: "checkbox", options: ["Granola:1.50", "Banana:0.00", "Morango:2.00", "Leite Condensado:1.00", "Mel:1.00", "Castanha:2.50"] },
+                    { name: "Remover", type: "checkbox", options: ["Sem Açúcar:0.00", "Sem Guarana:0.00"], isRemoval: true }
+                ]
+            },
+            pizza: {
+                name: "🍕 Pizza Margherita",
+                variations: [
+                    { name: "Tamanho", type: "radio", options: ["Broto:0.00", "Média:8.00", "Grande:15.00"], isRequired: true },
+                    { name: "Borda", type: "radio", options: ["Tradicional:0.00", "Catupiry:5.00", "Cheddar:4.00"] },
+                    { name: "Adicionais", type: "checkbox", options: ["Bacon:4.00", "Calabresa:3.00", "Azeitona:1.50", "Orégano:0.00"] }
+                ]
+            },
+            pipoca: {
+                name: "🍿 Pipoca Gourmet",
+                variations: [
+                    { name: "Tamanho", type: "radio", options: ["100g:0.00", "200g:4.00", "300g:7.00"], isRequired: true },
+                    { name: "Sabor", type: "radio", options: ["Doce:0.00", "Salgada:0.00", "Mista:1.00"], isRequired: true },
+                    { name: "Cobertura Doce", type: "checkbox", options: ["Caramelo:2.00", "Chocolate:3.00", "Leite Ninho:3.50", "Brigadeiro:4.00"] },
+                    { name: "Temperos Salgados", type: "checkbox", options: ["Queijo:2.50", "Bacon:3.00", "Ervas Finas:1.50", "Pimenta:0.50"] }
+                ]
+            },
+            bolos: {
+                name: "🍰 Bolo Artesanal",
+                variations: [
+                    { name: "Sabor", type: "radio", options: ["Chocolate:0.00", "Baunilha:0.00", "Morango:2.00", "Red Velvet:4.00"], isRequired: true },
+                    { name: "Tamanho", type: "radio", options: ["Fatia:0.00", "Fatia Dupla:6.00", "Bolo Inteiro:45.00"], isRequired: true },
+                    { name: "Cobertura", type: "checkbox", options: ["Chantilly:3.00", "Brigadeiro:3.50", "Ganache:4.00", "Frutas:5.00"] },
+                    { name: "Extras", type: "checkbox", options: ["Vela:2.00", "Granulado:1.00", "Confete:1.50"] }
+                ]
+            },
+            hamburguer: {
+                name: "🍔 Hamburguer Artesanal",
+                variations: [
+                    { name: "Tamanho", type: "radio", options: ["Simples:0.00", "Duplo:8.00", "Triplo:15.00"], isRequired: true },
+                    { name: "Pão", type: "radio", options: ["Tradicional:0.00", "Brioche:2.00", "Integral:1.50", "Sem Glúten:3.00"] },
+                    { name: "Adicionais", type: "checkbox", options: ["Bacon:5.00", "Ovo:3.00", "Queijo Extra:4.00", "Batata Palha:2.00", "Cebola Caramelizada:3.50", "Cogumelos:4.00"] },
+                    { name: "Molhos", type: "checkbox", options: ["Maionese Especial:1.00", "Barbecue:1.50", "Mostarda Dijon:2.00", "Aioli:2.50"] },
+                    { name: "Remover Ingredientes", type: "checkbox", options: ["Sem Queijo:0.00", "Sem Cebola:0.00", "Sem Tomate:0.00", "Sem Alface:0.00", "Sem Molho:0.00"], isRemoval: true }
+                ]
+            },
+
+            hotdog: {
+                name: "🌭 Cachorro Quente Gourmet",
+                variations: [
+                    { name: "Tamanho", type: "radio", options: ["Tradicional:0.00", "Jumbo:3.00", "Duplo:6.00"], isRequired: true },
+                    { name: "Salsicha", type: "radio", options: ["Tradicional:0.00", "Alemã:2.50", "Artesanal:4.00"] },
+                    { name: "Adicionais", type: "checkbox", options: ["Batata Palha:1.50", "Milho:1.00", "Ervilha:1.00", "Queijo Ralado:2.50", "Bacon:4.00", "Ovo de Codorna:2.00", "Cebola Caramelizada:2.00"] },
+                    { name: "Molhos", type: "checkbox", options: ["Ketchup:0.00", "Mostarda:0.00", "Maionese:0.00", "Molho Rosado:1.00", "Barbecue:1.50", "Molho Verde:1.00"] }
+                ]
+            },
+            bar: {
+                name: "🍺 Porção Especial",
+                variations: [
+                    { name: "Tipo", type: "radio", options: ["Batata Frita:0.00", "Mandioca:2.00", "Polenta:3.00", "Mista:4.00"], isRequired: true },
+                    { name: "Tamanho", type: "radio", options: ["Individual:0.00", "Para 2:8.00", "Para 4:15.00"], isRequired: true },
+                    { name: "Acompanhamentos", type: "checkbox", options: ["Ketchup:0.00", "Maionese:0.00", "Molho Barbecue:2.00", "Queijo Derretido:5.00", "Bacon:6.00", "Calabresa:4.00"] }
+                ]
+            },
+            sorvete: {
+                name: "🍦 Milk Shake Premium",
+                variations: [
+                    { name: "Sabor", type: "radio", options: ["Chocolate:0.00", "Baunilha:0.00", "Morango:1.00", "Ovomaltine:2.00", "Oreo:3.00"], isRequired: true },
+                    { name: "Tamanho", type: "radio", options: ["300ml:0.00", "500ml:4.00", "700ml:7.00"], isRequired: true },
+                    { name: "Complementos", type: "checkbox", options: ["Chantilly:3.00", "Granulado:1.50", "Cereja:2.00", "Biscoito:2.50", "Calda de Chocolate:2.00"] },
+                    { name: "Extras Premium", type: "checkbox", options: ["Leite Condensado:2.00", "Nutella:4.00", "Doce de Leite:3.00", "Paçoca:2.50"] }
+                ]
+            },
+            marmita: {
+                name: "🍱 Marmitex Executivo",
+                variations: [
+                    { name: "Proteína", type: "radio", options: ["Frango:0.00", "Carne:3.00", "Peixe:4.00", "Vegetariano:2.00"], isRequired: true },
+                    { name: "Tamanho", type: "radio", options: ["Pequena:0.00", "Média:3.00", "Grande:6.00"], isRequired: true },
+                    { name: "Acompanhamentos", type: "checkbox", options: ["Arroz:0.00", "Feijão:0.00", "Batata Frita:2.00", "Salada:1.50", "Farofa:1.00", "Macarrão:2.50"] },
+                    { name: "Extras", type: "checkbox", options: ["Ovo Frito:2.50", "Vinagrete:1.00", "Pimenta:0.00", "Queijo Ralado:1.50"] }
+                ]
+            },
+            cafe: {
+                name: "☕ Café Especial",
+                variations: [
+                    { name: "Tipo", type: "radio", options: ["Expresso:0.00", "Cappuccino:2.00", "Latte:3.00", "Mocha:4.00"], isRequired: true },
+                    { name: "Tamanho", type: "radio", options: ["Pequeno:0.00", "Médio:2.00", "Grande:4.00"], isRequired: true },
+                    { name: "Leite", type: "radio", options: ["Integral:0.00", "Desnatado:0.00", "Sem Lactose:1.50", "Leite de Coco:2.00", "Leite de Amenda:2.50"] },
+                    { name: "Extras", type: "checkbox", options: ["Açúcar:0.00", "Adoçante:0.00", "Canela:0.50", "Chantilly:3.00", "Chocolate:2.00", "Caramelo:2.50"] }
+                ]
+            },
+            pastel: {
+                name: "🥟 Pastel Artesanal",
+                variations: [
+                    { name: "Recheio", type: "radio", options: ["Queijo:0.00", "Carne:2.00", "Frango:2.00", "Palmito:3.00", "Camarão:5.00"], isRequired: true },
+                    { name: "Tamanho", type: "radio", options: ["Pequeno:0.00", "Médio:2.00", "Grande:4.00"], isRequired: true },
+                    { name: "Adicionais", type: "checkbox", options: ["Queijo Extra:2.50", "Orégano:0.00", "Pimenta:0.00", "Azeitona:1.50"] },
+                    { name: "Molhos", type: "checkbox", options: ["Mostarda:0.00", "Ketchup:0.00", "Molho de Pimenta:0.50", "Molho Especial:1.00"] }
+                ]
+            },
+            tapioca: {
+                name: "🥞 Tapioca Gourmet",
+                variations: [
+                    { name: "Recheio", type: "radio", options: ["Queijo:0.00", "Presunto e Queijo:3.00", "Frango:4.00", "Carne Seca:5.00"], isRequired: true },
+                    { name: "Adicionais", type: "checkbox", options: ["Queijo Extra:2.50", "Tomate:1.00", "Orégano:0.00", "Milho:1.50", "Ervilha:1.00"] },
+                    { name: "Molhos", type: "checkbox", options: ["Manteiga:1.00", "Requeijão:2.00", "Molho de Pimenta:0.50"] }
+                ]
+            },
+            crepe: {
+                name: "🥞 Crepe Premium",
+                variations: [
+                    { name: "Tipo", type: "radio", options: ["Doce:0.00", "Salgado:2.00"], isRequired: true },
+                    { name: "Recheio Doce", type: "checkbox", options: ["Nutella:3.00", "Doce de Leite:2.50", "Brigadeiro:3.50", "Geleia:2.00"] },
+                    { name: "Recheio Salgado", type: "checkbox", options: ["Queijo:2.00", "Presunto:3.00", "Frango:4.00", "Palmito:3.50"] },
+                    { name: "Adicionais", type: "checkbox", options: ["Banana:2.00", "Morango:3.00", "Chantilly:3.50", "Sorvete:4.00"] },
+                    { name: "Extras", type: "checkbox", options: ["Açúcar de Confeiteiro:1.00", "Canela:0.50", "Mel:1.50"] }
+                ]
+            },
+            espetinho: {
+                name: "🍖 Espetinho Especial",
+                variations: [
+                    { name: "Tipo", type: "radio", options: ["Frango:0.00", "Carne:3.00", "Linguica:2.50", "Misto:4.00"], isRequired: true },
+                    { name: "Quantidade", type: "radio", options: ["5 espetos:0.00", "10 espetos:12.00", "15 espetos:22.00"], isRequired: true },
+                    { name: "Acompanhamentos", type: "checkbox", options: ["Pão de Alho:3.00", "Farofa:2.00", "Vinagrete:2.50", "Pimenta:0.00", "Mandioca:3.50"] }
+                ]
+            },
+            salgados: {
+                name: "🥪 Salgados Artesanais",
+                variations: [
+                    { name: "Tipo", type: "radio", options: ["Coxinha:0.00", "Risole:1.00", "Pastel:1.50", "Empada:2.00"], isRequired: true },
+                    { name: "Quantidade", type: "radio", options: ["1 unidade:0.00", "3 unidades:4.00", "6 unidades:8.00", "12 unidades:15.00"], isRequired: true },
+                    { name: "Molhos", type: "checkbox", options: ["Ketchup:0.00", "Mostarda:0.00", "Maionese:0.00", "Molho de Pimenta:1.00", "Molho Especial:1.50"] }
+                ]
+            },
+            sushi: {
+                name: "🍣 Combinado de Sushi",
+                variations: [
+                    { name: "Tamanho", type: "radio", options: ["10 peças:0.00", "20 peças:25.00", "30 peças:45.00"], isRequired: true },
+                    { name: "Tipos", type: "checkbox", options: ["Salmao:5.00", "Atum:6.00", "Kani:3.00", "Pepino:2.00", "Abacate:2.50"] },
+                    { name: "Extras", type: "checkbox", options: ["Wasabi:1.00", "Gengibre:1.00", "Shoyu:0.00", "Gergelim:1.50"] }
+                ]
+            },
+            salada: {
+                name: "🥗 Salada Gourmet",
+                variations: [
+                    { name: "Base", type: "radio", options: ["Alface:0.00", "Rúcula:1.00", "Espinafre:1.50", "Mista:2.00"], isRequired: true },
+                    { name: "Proteína", type: "checkbox", options: ["Frango Grelhado:8.00", "Salmao:12.00", "Camarao:10.00", "Queijo:4.00"] },
+                    { name: "Complementos", type: "checkbox", options: ["Tomate Cereja:2.00", "Pepino:1.50", "Cenoura:1.00", "Azeitona:2.50", "Croutons:2.00"] },
+                    { name: "Molhos", type: "checkbox", options: ["Azeite e Vinagre:0.00", "Caesar:2.00", "Mostarda e Mel:2.50", "Iogurte:1.50"] }
+                ]
+            },
+            wrap: {
+                name: "🌯 Wrap Especial",
+                variations: [
+                    { name: "Tortilla", type: "radio", options: ["Tradicional:0.00", "Integral:1.00", "Espinafre:1.50"], isRequired: true },
+                    { name: "Recheio", type: "radio", options: ["Frango:0.00", "Carne:3.00", "Vegetariano:2.00"], isRequired: true },
+                    { name: "Adicionais", type: "checkbox", options: ["Queijo:2.00", "Alface:0.00", "Tomate:1.00", "Cebola:0.50", "Pepino:1.00"] },
+                    { name: "Molhos", type: "checkbox", options: ["Maionese:0.00", "Mostarda:0.00", "Barbecue:1.00", "Ranch:1.50"] }
+                ]
+            },
+            horta: {
+                name: "🥦 Horta Organica",
+                variations: [
+                    { name: "Tamanho da Cesta", type: "radio", options: ["Pequena (2kg):0.00", "Media (5kg):15.00", "Grande (10kg):30.00"], isRequired: true },
+                    { name: "Itens Inclusos", type: "checkbox", maxSelect: 5, options: ["Alface:2.50", "Tomate:3.00", "Cenoura:2.00", "Rucula:3.50", "Couve:2.50", "Batata:3.00"] }
+                ]
+            },
+            sorveteria: {
+                name: "🍦 Sorveteria Artesanal",
+                variations: [
+                    { name: "Tipo de Produto", type: "radio", options: ["Sorvete:0.00", "Açaí:2.00", "Milk Shake:4.00", "Sundae:6.00"], isRequired: true },
+                    { name: "Tamanho", type: "radio", options: ["Pequeno (200ml):0.00", "Médio (350ml):3.00", "Grande (500ml):6.00", "Gigante (700ml):10.00"], isRequired: true },
+                    { name: "Sabores (até 3)", type: "checkbox", maxSelect: 3, options: ["Baunilha:0.00", "Chocolate:0.00", "Morango:1.00", "Coco:1.50", "Maracujá:2.00", "Manga:2.00", "Amendoim:2.50", "Pistache:4.00"], isRequired: true },
+                    { name: "Coberturas", type: "checkbox", options: ["Calda de Chocolate:2.00", "Calda de Morango:2.00", "Calda de Caramelo:2.50", "Leite Condensado:1.50", "Nutella:4.00", "Doce de Leite:3.00"] },
+                    { name: "Complementos", type: "checkbox", options: ["Chantilly:2.50", "Granulado:1.00", "Castanha:3.00", "Amendoim:2.00", "Coco Ralado:1.50", "Cereja:3.50", "Biscoito:2.50"] },
+                    { name: "Extras Premium", type: "checkbox", options: ["Brownie:5.00", "Cookies:3.50", "Frutas Frescas:4.00", "Sorvete Extra:6.00", "Casquinha Especial:2.00"] }
+                ]
+            },
+            floricultura: {
+                name: "🌸 Floricultura",
+                variations: [
+                    { name: "Tipo de Arranjo", type: "radio", options: ["Buque Simples:0.00", "Arranjo de Mesa:15.00", "Cesta de Flores:25.00"], isRequired: true },
+                    { name: "Flores Principais", type: "checkbox", maxSelect: 3, options: ["Rosas Vermelhas:8.00", "Rosas Brancas:8.00", "Lirios:12.00", "Gerberas:7.00"] }
+                ]
+            },
+            sushi: {
+                name: "🍣 Sushi",
+                variations: [
+                    { name: "Tipo de Combo", type: "radio", options: ["Combo Simples:0.00", "Combo Medio:15.00", "Combo Premium:30.00"], isRequired: true },
+                    { name: "Pecas Incluidas", type: "checkbox", maxSelect: 4, options: ["Salmao:5.00", "Atum:6.00", "Camarao:7.00", "Kani:4.00", "Pepino:2.00"] }
+                ]
+            },
+            brigadeiro: {
+                name: "🍫 Brigadeiro",
+                variations: [
+                    { name: "Quantidade", type: "radio", options: ["12 unidades:0.00", "24 unidades:15.00", "50 unidades:30.00"], isRequired: true },
+                    { name: "Sabores", type: "checkbox", maxSelect: 3, options: ["Tradicional:0.00", "Chocolate Branco:2.00", "Morango:3.00", "Coco:2.50", "Maracuja:3.50"] }
+                ]
+            },
+            brownie: {
+                name: "🍰 Brownie",
+                variations: [
+                    { name: "Tamanho", type: "radio", options: ["Individual:0.00", "Medio (4 pessoas):12.00", "Grande (8 pessoas):25.00"], isRequired: true },
+                    { name: "Cobertura", type: "checkbox", maxSelect: 2, options: ["Chocolate:3.00", "Caramelo:3.50", "Nozes:4.00", "Morango:4.50"] }
+                ]
+            },
+            cafe_especial: {
+                name: "☕ Cafe Especial",
+                variations: [
+                    { name: "Tipo", type: "radio", options: ["Expresso:0.00", "Cappuccino:3.00", "Latte:4.00", "Mocha:5.00"], isRequired: true },
+                    { name: "Extras", type: "checkbox", maxSelect: 3, options: ["Leite Vegetal:2.00", "Xarope Baunilha:1.50", "Chantilly:2.50", "Canela:1.00"] }
+                ]
+            },
+            doces: {
+                name: "🍭 Doces Artesanais",
+                variations: [
+                    { name: "Tipo", type: "radio", options: ["Bem Casado:0.00", "Trufa:3.00", "Beijinho:2.00", "Cajuzinho:2.50"], isRequired: true },
+                    { name: "Quantidade", type: "radio", options: ["6 unidades:0.00", "12 unidades:8.00", "24 unidades:15.00"], isRequired: true }
+                ]
+            },
+            sucos: {
+                name: "🥤 Sucos Naturais",
+                variations: [
+                    { name: "Tamanho", type: "radio", options: ["300ml:0.00", "500ml:3.00", "700ml:5.00"], isRequired: true },
+                    { name: "Sabor", type: "radio", options: ["Laranja:0.00", "Acerola:2.00", "Maracuja:2.50", "Abacaxi:3.00", "Detox:5.00"], isRequired: true }
+                ]
+            }
+        };
+
+        function addVariation() {
+            variationCounter++;
+            const id = 'variation-' + Date.now();
+            
+            const html = `
+                <div class="variation-item" id="${id}">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center">
+                            <h3 class="text-lg font-semibold variation-title">📏 Variação ${variationCounter}</h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex flex-col gap-1">
+                                <button onclick="moveVariationUp('${id}')" class="move-btn move-up" title="Mover para cima">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M18 15l-6-6-6 6"/>
+                                    </svg>
+                                </button>
+                                <button onclick="moveVariationDown('${id}')" class="move-btn move-down" title="Mover para baixo">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6 9l6 6 6-6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <button onclick="removeVariation('${id}')" class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 variation-remove-btn" title="Remover variação">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14zM10 11v6M14 11v6"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Nome:</label>
+                            <input type="text" class="w-full p-3 border-2 border-gray-200 rounded-lg variation-name" placeholder="Ex: Tamanho" onchange="updateString()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Tipo:</label>
+                            <select class="w-full p-3 border-2 border-gray-200 rounded-lg variation-type" onchange="toggleSelectionLimit('${id}'); updateString()">
+                                <option value="radio">🔘 Radio (única)</option>
+                                <option value="checkbox">☑️ Checkbox (múltipla)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                <input type="checkbox" class="is-required" onchange="updateString()">
+                                <span>⚠️ Variação obrigatória (#Var)</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center mb-3">
+                            <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                <input type="checkbox" class="is-removal" onchange="updateString()">
+                                <span>🚫 Remoção de ingredientes</span>
+                            </label>
+                            <div class="ml-2 text-xs text-gray-500">
+                                (Marca esta variação como remoção para separar na mensagem do WhatsApp)
+                            </div>
+                        </div>
+                        <div class="flex items-center mb-3 selection-limit-container" style="display:none">
+                            <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                <span>🔢 Limite de seleção:</span>
+                                <input type="number" min="2" max="20" value="2" class="selection-limit w-16 p-1 border border-gray-300 rounded text-center" onchange="validateSelectionLimit(this); updateString()">
+                                <span class="text-xs text-gray-500">itens</span>
+                            </label>
+                            <div class="ml-2 text-xs text-gray-500">
+                                (Mínimo 2 itens - se for 1, use radio em vez de checkbox)
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2">💰 Opções e Valores:</label>
+                        <div class="text-xs text-gray-500 mb-3">💡 Configure o nome da opção, valor e se é acréscimo ou desconto</div>
+                        <div class="options-container space-y-3">
+                            <div class="option-item bg-gray-50 p-3 rounded-lg border">
+                                <div class="grid grid-cols-12 gap-3 items-center">
+                                    <div class="col-span-1 flex justify-center">
+                                        <div class="drag-handle" title="Arrastar para reordenar">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <input type="text" class="col-span-4 p-2 border border-gray-300 rounded option-input" placeholder="Nome da opção" onchange="updateString()">
+                                    
+                                    <div class="col-span-2 flex items-center gap-1">
+                                        <button type="button" class="value-type-btn active" data-type="positive" onclick="toggleValueType(this)">
+                                            <span class="text-green-600 font-bold">+</span>
+                                        </button>
+                                        <button type="button" class="value-type-btn" data-type="negative" onclick="toggleValueType(this)">
+                                            <span class="text-red-600 font-bold">-</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="col-span-1 text-center text-sm font-medium text-gray-600">R$</div>
+                                    <input type="number" step="0.01" min="0" class="col-span-3 p-2 border border-gray-300 rounded option-value" placeholder="0.00" onchange="updateString()">
+                                    
+                                    <button onclick="removeOption(this)" class="col-span-1 remove-btn" title="Remover opção">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14zM10 11v6M14 11v6"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="addOption('${id}')" class="mt-3 px-4 py-2 border-2 border-blue-500 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-all">➕ Adicionar Opção</button>
+                    </div>
+                </div>
+            `;
+
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            const newVariation = div.firstElementChild;
+            document.getElementById('variationsList').appendChild(newVariation);
+            
+            // Inicializar sortable para as opções da nova variação
+            const optionsContainer = newVariation.querySelector('.options-container');
+            initializeSortableForContainer(optionsContainer);
+            
+            renumberVariations();
+            updateString();
+        }
+
+        function removeVariation(id) {
+            document.getElementById(id).remove();
+            renumberVariations();
+            updateString();
+        }
+        
+        function removeOption(button) {
+            button.closest('.bg-gray-50').remove();
+            updateString();
+        }
+        
+        function toggleValueType(button) {
+            // Remove active de todos os botões do mesmo grupo
+            const container = button.closest('.grid');
+            const allBtns = container.querySelectorAll('.value-type-btn');
+            allBtns.forEach(btn => btn.classList.remove('active'));
+            
+            // Ativa o botão clicado
+            button.classList.add('active');
+            
+            // Atualiza a string
+            updateString();
+        }
+
+        function addOption(variationId) {
+            const container = document.querySelector(`#${variationId} .options-container`);
+            const html = `
+                <div class="option-item bg-gray-50 p-3 rounded-lg border">
+                    <div class="grid grid-cols-12 gap-3 items-center">
+                        <div class="col-span-1 flex justify-center">
+                            <div class="drag-handle" title="Arrastar para reordenar">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <input type="text" class="col-span-4 p-2 border border-gray-300 rounded option-input" placeholder="Nome da opção" onchange="updateString()">
+                        
+                        <div class="col-span-2 flex items-center gap-1">
+                            <button type="button" class="value-type-btn active" data-type="positive" onclick="toggleValueType(this)">
+                                <span class="text-green-600 font-bold">+</span>
+                            </button>
+                            <button type="button" class="value-type-btn" data-type="negative" onclick="toggleValueType(this)">
+                                <span class="text-red-600 font-bold">-</span>
+                            </button>
+                        </div>
+                        
+                        <div class="col-span-1 text-center text-sm font-medium text-gray-600">R$</div>
+                        <input type="number" step="0.01" min="0" class="col-span-3 p-2 border border-gray-300 rounded option-value" placeholder="0.00" onchange="updateString()">
+                        
+                        <button onclick="removeOption(this)" class="col-span-1 remove-btn" title="Remover opção">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14zM10 11v6M14 11v6"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+            
+            // Inicializar sortable para o novo container se ainda não foi inicializado
+            initializeSortableForContainer(container);
+        }
+
+        function removeOption(button) {
+            const optionItem = button.closest('.option-item');
+            const container = optionItem.closest('.options-container');
+            
+            if (container.children.length > 1) {
+                optionItem.remove();
+                updateString();
+            } else {
+                showNotification('Deve haver pelo menos uma opção por variação!', 'error');
+            }
+        }
+        
+        // Função para inicializar SortableJS em um container de opções
+        function initializeSortableForContainer(container) {
+            if (!container || container.sortableInstance) {
+                return; // Já foi inicializado ou container inválido
+            }
+            
+            container.sortableInstance = new Sortable(container, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                handle: '.drag-handle',
+                onEnd: function(evt) {
+                    updateString();
+                    showNotification('Opção reordenada!', 'success', 2000);
+                }
+            });
+        }
+        
+        // Função para inicializar sortable em todas as variações existentes
+        function initializeAllSortables() {
+            document.querySelectorAll('.options-container').forEach(container => {
+                initializeSortableForContainer(container);
+            });
+        }
+        
+        // Inicializar sortables quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAllSortables();
+        });
+
+        function toggleSelectionLimit(id) {
+            const typeSelect = document.querySelector(`#${id} .variation-type`);
+            const limitContainer = document.querySelector(`#${id} .selection-limit-container`);
+            const limitInput = document.querySelector(`#${id} .selection-limit`);
+            
+            if (typeSelect.value === 'checkbox') {
+                limitContainer.style.display = 'flex';
+                // Garantir que o limite seja pelo menos 2 para checkbox
+                if (parseInt(limitInput.value) < 2) {
+                    limitInput.value = 2;
+                }
+            } else {
+                limitContainer.style.display = 'none';
+            }
+        }
+        
+        function validateSelectionLimit(input) {
+            const value = parseInt(input.value);
+            if (value < 2) {
+                input.value = 2;
+                showNotification('⚠️ Limite mínimo para checkbox é 2 itens (senão use radio)', 'warning', 4000);
+            } else if (value > 20) {
+                input.value = 20;
+                showNotification('⚠️ Limite máximo é 20 itens', 'warning', 3000);
+            }
+        }
+
+        function updateString() {
+            const variations = [];
+            const errors = [];
+            
+            document.querySelectorAll('.variation-item').forEach((item, index) => {
+                const name = item.querySelector('.variation-name').value.trim();
+                const type = item.querySelector('.variation-type').value;
+                const isRequired = item.querySelector('.is-required').checked;
+                const isRemoval = item.querySelector('.is-removal').checked;
+                
+                // Validação do nome da variação
+                if (!name) {
+                    errors.push(`Variação ${index + 1}: Nome é obrigatório`);
+                    return;
+                }
+                
+                // Verificar caracteres especiais no nome (permitindo emojis e caracteres Unicode)
+                if (!/^[\p{L}\p{N}\p{S}\p{M}\s\-_().]+$/u.test(name)) {
+                    errors.push(`Variação ${index + 1}: Nome contém caracteres inválidos`);
+                }
+                
+                const options = [];
+                const optionNames = new Set(); // Para detectar nomes duplicados
+                
+                item.querySelectorAll('.option-input').forEach((input, optIndex) => {
+                    const optionName = input.value.trim();
+                    const optionValueInput = item.querySelectorAll('.option-value')[optIndex];
+                    const optionValue = parseFloat(optionValueInput.value) || 0;
+                    
+                    if (optionName) {
+                        // Verificar nomes duplicados
+                        if (optionNames.has(optionName.toLowerCase())) {
+                            errors.push(`Variação ${index + 1}: Opção "${optionName}" duplicada`);
+                        }
+                        optionNames.add(optionName.toLowerCase());
+                        
+                        // Verificar caracteres especiais no nome da opção (permitindo emojis e caracteres Unicode)
+                        if (!/^[\p{L}\p{N}\p{S}\p{M}\s\-_().]+$/u.test(optionName)) {
+                            errors.push(`Variação ${index + 1}: Opção "${optionName}" contém caracteres inválidos`);
+                        }
+                        
+                        // Verificar se o botão negativo está ativo
+                        const optionContainer = input.closest('.bg-gray-50');
+                        const isNegative = optionContainer.querySelector('.value-type-btn[data-type="negative"].active');
+                        
+                        // Melhor formatação de valores monetários
+                        const formattedValue = optionValue.toFixed(2).replace('.', ',');
+                        
+                        if (isNegative && optionValue > 0) {
+                            options.push(`${optionName} -${formattedValue}`);
+                        } else if (optionValue > 0) {
+                            options.push(`${optionName} +${formattedValue}`);
+                        } else {
+                            options.push(`${optionName} +0,00`);
+                        }
+                    }
+                });
+                
+                // Validação de opções
+                if (options.length === 0) {
+                    errors.push(`Variação ${index + 1}: Deve ter pelo menos uma opção`);
+                    return;
+                }
+                
+                if (name && options.length > 0) {
+                    let str = `${name}:${type}`;
+                    
+                    // Adicionar limite de seleção para checkbox
+                    if (type === 'checkbox') {
+                        const limitInput = item.querySelector('.selection-limit');
+                        const limit = parseInt(limitInput.value) || 1;
+                        if (limit > 1) {
+                            str += `:maxselect=${limit}`;
+                        }
+                    }
+                    
+                    str += `:${options.join('/')}`;
+                    
+                    // Lógica para prefixos
+                    if (isRemoval && isRequired) {
+                        str = `~#${str}`; // Remoção obrigatória
+                    } else if (isRemoval) {
+                        str = `~Var: ${str}`; // Remoção opcional
+                    } else if (isRequired) {
+                        str = `#${str}`; // Obrigatória
+                    } else {
+                        str = `Var: ${str}`; // Opcional
+                    }
+                    
+                    variations.push(str);
+                }
+            });
+            
+            // Exibir erros se houver
+            if (errors.length > 0) {
+                showNotification(`Erros encontrados:\n${errors.join('\n')}`, 'error');
+            }
+
+            const result = variations.join('\n');
+            document.getElementById('generatedString').value = result;
+            updatePreview(result);
+            
+            // Atualizar contador de variações
+            updateVariationCounter(variations.length);
+        }
+
+        let previewCart = [];
+        let previewTotal = 15.00; // Preço base
+        
+        function updatePreview(str) {
+            const container = document.getElementById('previewContainer');
+            
+            if (!str) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500">
+                        <div class="text-4xl mb-4">🎯</div>
+                        <p>Configure as variações para ver o preview</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `<div class="bg-white border-2 border-gray-200 rounded-lg p-4">
+                <h3 class="text-lg font-bold mb-4">🍽️ Produto Exemplo - R$ 15,00</h3>
+                <div class="text-sm text-gray-600 mb-4">Preço base + variações selecionadas</div>
+                <div id="preview-variations">`;
+
+            const lines = str.split('\n').filter(line => line.trim());
+            let hasVisibleVariations = false;
+            
+            lines.forEach((line, lineIndex) => {
+                const isRequired = line.startsWith('#') || line.startsWith('~#') || line.startsWith('#~');
+                const isRemoval = line.startsWith('~');
+                
+                // Processar dependências corretamente
+                let cleanLine = line.replace(/^(~#|#~|#|~Var:\s*|~|Var:\s*)/, '');
+                const parts = cleanLine.split(':');
+                const name = parts[0];
+                const type = parts[1];
+                
+                // Verificar se há maxselect
+                let maxSelect = null;
+                let optionsStartIndex = 2;
+                
+                // Verificar maxselect
+                if (parts[optionsStartIndex] && parts[optionsStartIndex].startsWith('maxselect=')) {
+                    maxSelect = parseInt(parts[optionsStartIndex].replace('maxselect=', ''));
+                    optionsStartIndex++;
+                }
+                
+                const optionsStr = parts.slice(optionsStartIndex).join(':');
+                
+                // Renderizar todas as variações (sempre visíveis)
+                if (name && optionsStr) {
+                    hasVisibleVariations = true;
+                    
+                    html += `<div class="mb-4 variation-preview" data-variation-index="${lineIndex}" data-variation-name="${name}" data-variation-type="${type}" ${maxSelect ? `data-max-select="${maxSelect}"` : ''}>
+                        <h4 class="font-semibold mb-2 flex items-center gap-2">
+                            ${name}
+                            ${isRequired ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">⚠️ Obrigatório</span>' : '<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Opcional</span>'}
+                            ${isRemoval ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">🚫 Remoção</span>' : ''}
+                            ${maxSelect ? `<span class="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">🔢 Máx: ${maxSelect}</span>` : ''}
+                        </h4>
+                        <div class="grid grid-cols-1 gap-2">`;
+                    
+                    const options = optionsStr.split('/');
+                    options.forEach((opt, i) => {
+                        const inputType = type === 'radio' ? 'radio' : 'checkbox';
+                        const inputName = type === 'radio' ? `preview_${name.replace(/\s+/g, '_')}` : `preview_${name.replace(/\s+/g, '_')}_${i}`;
+                        
+                        // Extrair nome e valor da opção
+                        const match = opt.match(/^(.+?)\s([+-]\d+[,.]\d{2})$/);
+                        if (match) {
+                            const [, optionName, optionValue] = match;
+                            const formattedValue = optionValue.replace('.', ',');
+                            const numericValue = parseFloat(optionValue.replace(',', '.'));
+                            
+                            // Determinar cor baseada no valor
+                            let valueColor = 'text-gray-600';
+                            if (numericValue > 0) {
+                                valueColor = 'text-green-600';
+                            } else if (numericValue < 0) {
+                                valueColor = 'text-red-600';
+                            } else {
+                                valueColor = 'text-gray-800';
+                            }
+                            
+                            html += `
+                                <label class="flex items-center justify-between p-3 border rounded hover:bg-gray-50 cursor-pointer">
+                                    <div class="flex items-center gap-3">
+                                        <input type="${inputType}" name="${inputName}" value="${numericValue}" 
+                                               data-option-name="${optionName}" data-variation-name="${name}"
+                                               onchange="handlePreviewChange(this)" class="text-red-500">
+                                        <span class="text-sm">${optionName}</span>
+                                    </div>
+                                    <span class="text-sm font-medium ${valueColor}">R$ ${formattedValue}</span>
+                                </label>`;
+                        }
+                    });
+                    
+                    html += `</div></div>`;
+                }
+            });
+            
+            if (!hasVisibleVariations) {
+                html += `<div class="text-center text-gray-500 py-4">
+                    <p>Nenhuma variação disponível ou dependências não satisfeitas</p>
+                </div>`;
+            }
+
+            html += `</div>
+                <div class="border-t pt-4 mt-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="font-semibold">Total:</span>
+                        <span id="preview-total" class="text-lg font-bold text-green-600">R$ 15,00</span>
+                    </div>
+                    <button onclick="simulateAddToCart()" class="btn-primary w-full">🛍️ Adicionar ao Carrinho</button>
+                </div>
+                
+                <!-- Simulador de Carrinho -->
+                <div id="cart-simulator" class="mt-4 p-4 bg-gray-50 rounded-lg" style="display: none;">
+                    <h4 class="font-semibold mb-2 flex items-center gap-2">
+                        🛒 Simulador de Carrinho
+                        <button onclick="clearCart()" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200">Limpar</button>
+                    </h4>
+                    <div id="cart-items" class="space-y-2 mb-3"></div>
+                    <div class="border-t pt-2">
+                        <div class="flex justify-between font-semibold">
+                            <span>Total do Carrinho:</span>
+                            <span id="cart-total" class="text-green-600">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            
+            container.innerHTML = html;
+            
+            // Inicializar o preview
+            updatePreviewTotal();
+        }
+
+        function parseString(str) {
+            return str.split('|').map(part => {
+                const components = part.split(':');
+                const variation = {
+                    name: components[0],
+                    type: components[1],
+                    maxSelect: null,
+                    options: []
+                };
+                
+                let optIndex = 2;
+                
+                // Verificar maxselect
+                if (components[optIndex] && components[optIndex].startsWith('maxselect=')) {
+                    variation.maxSelect = parseInt(components[optIndex].replace('maxselect=', ''));
+                    optIndex++;
+                }
+                
+                // Verificar maxselect
+                if (components[optIndex] && components[optIndex].startsWith('maxselect=')) {
+                    variation.maxSelect = parseInt(components[optIndex].replace('maxselect=', ''));
+                    optIndex++;
+                }
+                
+                if (components[optIndex]) {
+                    variation.options = components[optIndex].split('/');
+                }
+                
+                return variation;
+            });
+        }
+
+        function loadTemplate(key) {
+            clearAll();
+            const template = templates[key];
+            
+            template.variations.forEach(v => {
+                addVariation();
+                const item = document.querySelector('.variation-item:last-child');
+                item.querySelector('.variation-name').value = v.name;
+                item.querySelector('.variation-type').value = v.type;
+                
+                // Configurar limite de seleção para checkboxes
+                if (v.type === 'checkbox' && v.maxSelect) {
+                    toggleSelectionLimit(item.id);
+                    item.querySelector('.selection-limit').value = v.maxSelect;
+                } else if (v.type === 'checkbox') {
+                    // Mostrar controle de limite para todos os checkboxes
+                    toggleSelectionLimit(item.id);
+                }
+                
+                // Marcar como obrigatória se necessário
+                if (v.isRequired) {
+                    item.querySelector('.is-required').checked = true;
+                }
+                
+                // Marcar como remoção se necessário
+                if (v.isRemoval) {
+                    item.querySelector('.is-removal').checked = true;
+                }
+                
+                // Limpar container e adicionar opções com valores
+                const container = item.querySelector('.options-container');
+                container.innerHTML = '';
+                
+                v.options.forEach(opt => {
+                    const [optionName, optionValue] = opt.split(':');
+                    const isNegative = parseFloat(optionValue) < 0;
+                    const absValue = Math.abs(parseFloat(optionValue));
+                    
+                    container.innerHTML += `
+                        <div class="option-item bg-gray-50 p-3 rounded-lg border">
+                            <div class="grid grid-cols-12 gap-3 items-center">
+                                <div class="col-span-1 flex justify-center">
+                                    <div class="drag-handle" title="Arrastar para reordenar">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <input type="text" class="col-span-4 p-2 border border-gray-300 rounded option-input" value="${optionName}" onchange="updateString()">
+                                
+                                <div class="col-span-2 flex items-center gap-1">
+                                    <button type="button" class="value-type-btn ${!isNegative ? 'active' : ''}" data-type="positive" onclick="toggleValueType(this)">
+                                        <span class="text-green-600 font-bold">+</span>
+                                    </button>
+                                    <button type="button" class="value-type-btn ${isNegative ? 'active' : ''}" data-type="negative" onclick="toggleValueType(this)">
+                                        <span class="text-red-600 font-bold">-</span>
+                                    </button>
+                                </div>
+                                
+                                <div class="col-span-1 text-center text-sm font-medium text-gray-600">R$</div>
+                                <input type="number" step="0.01" min="0" class="col-span-3 p-2 border border-gray-300 rounded option-value" value="${absValue}" onchange="updateString()">
+                                
+                                <button onclick="removeOption(this)" class="col-span-1 remove-btn" title="Remover opção">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14zM10 11v6M14 11v6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+            
+            setTimeout(() => {
+                // Inicializar sortable para todas as opções do template carregado
+                initializeAllSortables();
+                
+                updateString();
+            }, 200);
+            
+            showNotification(`Template "${template.name}" carregado com sucesso!`, 'success');
+        }
+
+        function clearAll() {
+            document.getElementById('variationsList').innerHTML = '';
+            document.getElementById('generatedString').value = '';
+            updatePreview('');
+            variationCounter = 0;
+            updateVariationCounter(0);
+        }
+
+        function copyString() {
+            const textarea = document.getElementById('generatedString');
+            if (!textarea.value) {
+                showNotification('Nenhuma string para copiar!', 'error');
+                return;
+            }
+            
+            // Usar API moderna de clipboard se disponível
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(textarea.value).then(() => {
+                    showNotification('✅ String copiada para a área de transferência!', 'success');
+                }).catch(() => {
+                    // Fallback para método antigo
+                    fallbackCopy(textarea);
+                });
+            } else {
+                fallbackCopy(textarea);
+            }
+        }
+        
+        function fallbackCopy(textarea) {
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // Para dispositivos móveis
+            
+            try {
+                document.execCommand('copy');
+                showNotification('✅ String copiada!', 'success');
+            } catch (err) {
+                showNotification('❌ Erro ao copiar. Selecione e copie manualmente.', 'error');
+            }
+        }
+
+        function importString() {
+            const input = prompt('Cole a string de variações (uma por linha):');
+            if (!input) return;
+            
+            try {
+                // Validar formato antes de importar
+                const validationErrors = validateStringFormat(input);
+                if (validationErrors.length > 0) {
+                    showNotification(`Erros de formato encontrados:\n${validationErrors.join('\n')}`, 'error', 8000);
+                    return;
+                }
+                
+                clearAll();
+                const lines = input.split('\n').filter(line => line.trim());
+                let importedCount = 0;
+                
+                lines.forEach((line, lineIndex) => {
+                    // Detectar todos os tipos de prefixos
+                    let isRequired = false;
+                    let isRemoval = false;
+                    let cleanLine = line;
+                    
+                    // Verificar prefixos combinados e individuais
+                    if (line.startsWith('~#')) {
+                        isRemoval = true;
+                        isRequired = true;
+                        cleanLine = line.substring(2);
+                    } else if (line.startsWith('#~')) {
+                        isRequired = true;
+                        isRemoval = true;
+                        cleanLine = line.substring(2);
+                    } else if (line.startsWith('~Var:')) {
+                        isRemoval = true;
+                        cleanLine = line.replace(/^~Var:\s*/, '');
+                    } else if (line.startsWith('#')) {
+                        isRequired = true;
+                        cleanLine = line.substring(1);
+                    } else if (line.startsWith('~')) {
+                        isRemoval = true;
+                        cleanLine = line.substring(1);
+                    } else if (line.startsWith('Var:')) {
+                        cleanLine = line.replace(/^Var:\s*/, '');
+                    }
+                    
+                    const parts = cleanLine.split(':');
+                    
+                    if (parts.length >= 3) {
+                        addVariation();
+                        const item = document.querySelector('.variation-item:last-child');
+                        
+                        // Nome e tipo
+                        item.querySelector('.variation-name').value = parts[0];
+                        item.querySelector('.variation-type').value = parts[1];
+                        
+                        // Marcar como obrigatória
+                        if (isRequired) {
+                            item.querySelector('.is-required').checked = true;
+                        }
+                        
+                        // Marcar como remoção
+                        if (isRemoval) {
+                            item.querySelector('.is-removal').checked = true;
+                        }
+                        
+                        // Processar maxselect se existir
+                        let optionsIndex = 2;
+                        if (parts[2] && parts[2].startsWith('maxselect=')) {
+                            const maxSelect = parseInt(parts[2].replace('maxselect=', ''));
+                            if (parts[1] === 'checkbox') {
+                                toggleSelectionLimit(item.id);
+                                item.querySelector('.selection-limit').value = maxSelect;
+                            }
+                            optionsIndex = 3;
+                        } else if (parts[1] === 'checkbox') {
+                            // Mostrar controle de limite para todos os checkboxes
+                            toggleSelectionLimit(item.id);
+                        }
+                        
+                        // Opções
+                        const optionsStr = parts.slice(optionsIndex).join(':');
+                        const options = optionsStr.split('/');
+                        
+                        const container = item.querySelector('.options-container');
+                        container.innerHTML = '';
+                        
+                        options.forEach(opt => {
+                            // Melhor regex para capturar nome e valor
+                            const match = opt.match(/^(.+?)\s([+-]\d+[,.]\d{2})$/);
+                            if (match) {
+                                const [, optionName, optionValue] = match;
+                                const isNegative = optionValue.startsWith('-');
+                                const numericValue = Math.abs(parseFloat(optionValue.replace(',', '.')));
+                                
+                                // Usar a função addOption para criar a estrutura correta
+                                addOption(item.id);
+                                const lastOption = container.lastElementChild;
+                                
+                                // Preencher dados
+                                lastOption.querySelector('.option-input').value = optionName;
+                                lastOption.querySelector('.option-value').value = numericValue;
+                                
+                                // Configurar tipo de valor (positivo/negativo)
+                                const positiveBtn = lastOption.querySelector('.value-type-btn[data-type="positive"]');
+                                const negativeBtn = lastOption.querySelector('.value-type-btn[data-type="negative"]');
+                                
+                                if (isNegative && positiveBtn && negativeBtn) {
+                                    positiveBtn.classList.remove('active');
+                                    negativeBtn.classList.add('active');
+                                } else if (positiveBtn && negativeBtn) {
+                                    negativeBtn.classList.remove('active');
+                                    positiveBtn.classList.add('active');
+                                }
+                            }
+                        });
+                        
+                        importedCount++;
+                    }
+                });
+                
+                setTimeout(() => {
+                    initializeAllSortables();
+                    updateString();
+                }, 200);
+                
+                showNotification(`✅ ${importedCount} variação${importedCount !== 1 ? 'ões' : ''} importada${importedCount !== 1 ? 's' : ''} com sucesso!`, 'success');
+            } catch (error) {
+                console.error('Erro ao importar:', error);
+                showNotification('❌ Erro ao importar string. Verifique o formato e tente novamente!', 'error');
+            }
+        }
+
+        function showNotification(message, type, duration = 4000) {
+            const notification = document.getElementById('notification');
+            
+            // Escapar HTML para evitar XSS
+            const escapedMessage = message.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            
+            notification.innerHTML = `
+                <span>${escapedMessage}</span>
+                <button class="notification-close" onclick="closeNotification()">×</button>
+            `;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            // Limpar timeout anterior se existir
+            if (notification.timeoutId) {
+                clearTimeout(notification.timeoutId);
+            }
+            
+            // Definir novo timeout
+            notification.timeoutId = setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
+        
+        function closeNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+        }
+        
+        // Funções de movimentação com setas (removido drag and drop dos boxes)
+        
+        // Move variations up/down with arrows
+        function moveVariationUp(id) {
+            const item = document.getElementById(id);
+            const prevItem = item.previousElementSibling;
+            
+            if (prevItem) {
+                item.classList.add('moving');
+                setTimeout(() => {
+                    item.parentNode.insertBefore(item, prevItem);
+                    renumberVariations();
+                    updateString();
+                    item.classList.remove('moving');
+                    showNotification('Variação movida para cima!', 'success');
+                }, 150);
+            }
+        }
+        
+        function moveVariationDown(id) {
+            const item = document.getElementById(id);
+            const nextItem = item.nextElementSibling;
+            
+            if (nextItem) {
+                item.classList.add('moving');
+                setTimeout(() => {
+                    item.parentNode.insertBefore(nextItem, item);
+                    renumberVariations();
+                    updateString();
+                    item.classList.remove('moving');
+                    showNotification('Variação movida para baixo!', 'success');
+                }, 150);
+            }
+        }
+        
+        // Renumber all variations
+        function renumberVariations() {
+            const variations = document.querySelectorAll('.variation-item');
+            variations.forEach((item, index) => {
+                const title = item.querySelector('.variation-title');
+                if (title) {
+                    title.textContent = `📏 Variação ${index + 1}`;
+                }
+                
+                // Update move button states
+                const upBtn = item.querySelector('.move-up');
+                const downBtn = item.querySelector('.move-down');
+                
+                if (upBtn) upBtn.disabled = (index === 0);
+                if (downBtn) downBtn.disabled = (index === variations.length - 1);
+            });
+            
+            // Atualizar contador
+            updateVariationCounter(variations.length);
+        }
+        
+        // Nova função para atualizar contador de variações
+        function updateVariationCounter(count) {
+            const counter = document.getElementById('variation-counter');
+            if (counter) {
+                counter.textContent = `${count} variação${count !== 1 ? 'ões' : ''} configurada${count !== 1 ? 's' : ''}`;
+            }
+        }
+        
+        // Função para validar formato de string antes de importar
+        function validateStringFormat(str) {
+            const lines = str.split('\n').filter(line => line.trim());
+            const errors = [];
+            
+            lines.forEach((line, index) => {
+                // Remover todos os tipos de prefixos para validação
+                let cleanLine = line;
+                
+                if (line.startsWith('~#') || line.startsWith('#~')) {
+                    cleanLine = line.substring(2);
+                } else if (line.startsWith('~Var:')) {
+                    cleanLine = line.replace(/^~Var:\s*/, '');
+                } else if (line.startsWith('#') || line.startsWith('~')) {
+                    cleanLine = line.substring(1);
+                } else if (line.startsWith('Var:')) {
+                    cleanLine = line.replace(/^Var:\s*/, '');
+                }
+                
+                const parts = cleanLine.split(':');
+                
+                if (parts.length < 3) {
+                    errors.push(`Linha ${index + 1}: Formato inválido (mínimo: nome:tipo:opções)`);
+                }
+                
+                if (parts[1] && !['radio', 'checkbox'].includes(parts[1])) {
+                    errors.push(`Linha ${index + 1}: Tipo deve ser 'radio' ou 'checkbox'`);
+                }
+            });
+            
+            return errors;
+        }
+        
+        // Função simplificada para tratar mudanças no preview
+        function handlePreviewChange(input) {
+            // 1. Verificar limite de seleção
+            if (!checkSelectionLimit(input)) {
+                return; // Se excedeu limite, parar aqui
+            }
+            
+            // 2. Atualizar total
+            updatePreviewTotal();
+        }
+        
+        function updatePreviewTotal() {
+            let total = 15.00; // Preço base
+            const inputs = document.querySelectorAll('#preview-variations input:checked');
+            
+            inputs.forEach(input => {
+                const value = parseFloat(input.value) || 0;
+                total += value;
+            });
+            
+            const totalElement = document.getElementById('preview-total');
+            if (totalElement) {
+                totalElement.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+            }
+        }
+        
+        function checkSelectionLimit(input) {
+            const variationContainer = input.closest('.variation-preview');
+            if (!variationContainer) {
+                return true;
+            }
+            
+            const variationType = variationContainer.getAttribute('data-variation-type');
+            const maxSelect = parseInt(variationContainer.getAttribute('data-max-select')) || 0;
+            
+            if (variationType === 'checkbox' && maxSelect > 0) {
+                const checkedInputs = variationContainer.querySelectorAll('input[type="checkbox"]:checked');
+                
+                if (input.checked && checkedInputs.length > maxSelect) {
+                    input.checked = false;
+                    showNotification(`Máximo de ${maxSelect} opções permitidas!`, 'warning', 3000);
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        function simulateAddToCart() {
+            const selectedItems = [];
+            let itemTotal = 15.00; // Preço base
+            
+            const inputs = document.querySelectorAll('#preview-variations input:checked');
+            inputs.forEach(input => {
+                const optionName = input.getAttribute('data-option-name');
+                const variationName = input.getAttribute('data-variation-name');
+                const value = parseFloat(input.value) || 0;
+                
+                selectedItems.push({
+                    variation: variationName,
+                    option: optionName,
+                    value: value
+                });
+                
+                itemTotal += value;
+            });
+            
+            // Adicionar ao carrinho simulado
+            const cartItem = {
+                id: Date.now(),
+                name: '🍽️ Produto Exemplo',
+                basePrice: 15.00,
+                variations: selectedItems,
+                total: itemTotal,
+                quantity: 1
+            };
+            
+            previewCart.push(cartItem);
+            updateCartDisplay();
+            
+            // Mostrar notificação
+            showNotification('✅ Item adicionado ao carrinho!', 'success');
+        }
+        
+        function updateCartDisplay() {
+            const cartSimulator = document.getElementById('cart-simulator');
+            const cartItems = document.getElementById('cart-items');
+            const cartTotal = document.getElementById('cart-total');
+            
+            if (previewCart.length === 0) {
+                cartSimulator.style.display = 'none';
+                return;
+            }
+            
+            cartSimulator.style.display = 'block';
+            
+            let html = '';
+            let total = 0;
+            
+            previewCart.forEach((item, index) => {
+                total += item.total * item.quantity;
+                
+                html += `
+                    <div class="bg-white p-3 rounded border">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <h5 class="font-medium">${item.name}</h5>
+                                <div class="text-xs text-gray-600 mt-1">
+                                    Preço base: R$ ${item.basePrice.toFixed(2).replace('.', ',')}
+                                </div>
+                            </div>
+                            <button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 text-sm">🗑️</button>
+                        </div>
+                        
+                        ${item.variations.length > 0 ? `
+                            <div class="text-xs space-y-1 mb-2">
+                                ${item.variations.map(v => `
+                                    <div class="flex justify-between">
+                                        <span>${v.variation}: ${v.option}</span>
+                                        <span class="${v.value >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                            ${v.value >= 0 ? '+' : ''}R$ ${v.value.toFixed(2).replace('.', ',')}
+                                        </span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="flex justify-between items-center pt-2 border-t">
+                            <div class="flex items-center gap-2">
+                                <button onclick="updateCartQuantity(${index}, -1)" class="text-xs bg-gray-200 px-2 py-1 rounded">-</button>
+                                <span class="text-sm">${item.quantity}</span>
+                                <button onclick="updateCartQuantity(${index}, 1)" class="text-xs bg-gray-200 px-2 py-1 rounded">+</button>
+                            </div>
+                            <span class="font-medium text-green-600">R$ ${(item.total * item.quantity).toFixed(2).replace('.', ',')}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            cartItems.innerHTML = html;
+            cartTotal.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+        }
+        
+        function removeFromCart(index) {
+            previewCart.splice(index, 1);
+            updateCartDisplay();
+            showNotification('🗑️ Item removido do carrinho', 'info');
+        }
+        
+        function updateCartQuantity(index, change) {
+            if (previewCart[index]) {
+                previewCart[index].quantity += change;
+                if (previewCart[index].quantity <= 0) {
+                    removeFromCart(index);
+                } else {
+                    updateCartDisplay();
+                }
+            }
+        }
+        
+        function clearCart() {
+            previewCart = [];
+            updateCartDisplay();
+            showNotification('🧹 Carrinho limpo!', 'success');
+        }
+        
+        // Função de debug para testar dependências
+
+    </script>
+    
+    <!-- Rodapé com informações de autoria -->
+    <footer class="mt-12 py-6 border-t border-gray-200 bg-gray-50">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="text-sm text-gray-600">
+                    <p><strong>🎨 Gerador de Variações - Cardápio Sheets</strong></p>
+                </div>
+                <div class="text-xs text-gray-500">
+                    <p>© 2025 - Todos os direitos reservados</p>
+                    <p>Sistema simplificado sem dependências</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
